@@ -20,6 +20,7 @@ import base64
 from io import StringIO
 from io import BytesIO
 from oci._vendor import urllib3
+from azure import post_to_azure
 
 #get auth token for idcs
 def get_oauth_token(idcsurl,apiuser,apipwd):
@@ -79,6 +80,7 @@ def handler(ctx, data: io.BytesIO=None):
                 bucketName = cfg["TRACKER_BUCKET"]
                 trackerObjectName = cfg["TRACKER_OBJECT_NAME"]
                 entityID = cfg["ENTITY_ID"]
+                sendToAzureInstead = cfg["SEND_TO_AZURE_INSTEAD"]
 
                 startIndex = 1 
                 count = 1000
@@ -140,9 +142,15 @@ def handler(ctx, data: io.BytesIO=None):
 
           bdata = io.BytesIO(bytes(body, 'utf-8'))
 
-          message=upload_object(log_analytics_client,namespace,uploadName,sourceName,fileName,logGroupID,bdata,entityID)
-          print("Success:" + fileName + " uploaded into log analytics of "+ destRegion, flush=True)
-          print("for reference: ",message,flush=True)
+          if sendToAzureInstead is True:
+              post_to_azure(bdata)
+              print("Success: posted to Azure", flush=True)
+
+          else:
+              message=upload_object(log_analytics_client,namespace,uploadName,sourceName,fileName,logGroupID,bdata,entityID)
+              print("Success:" + fileName + " uploaded into log analytics of "+ destRegion, flush=True)
+              print("for reference: ",message,flush=True)
+
           startIndex += 1000
 
         output=store_tracker_timestamp(objstr_client, bucketName, trackerObjectName, date_end) 
